@@ -2,7 +2,7 @@ import sqlite3
 import os
 from contextlib import contextmanager
 
-DB_PATH = os.environ.get("DATABASE_PATH", "purchase_requests.db")
+DB_PATH = os.environ.get("DATABASE_PATH", "/tmp/purchase_requests.db" if os.environ.get("VERCEL") else "purchase_requests.db")
 
 def get_connection(db_path: str = None) -> sqlite3.Connection:
     target_path = db_path or DB_PATH

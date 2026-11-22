@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/requests/(.*)", "destination": "/api" },
+    { "source": "/requests", "destination": "/api" },
+    { "source": "/health", "destination": "/api" },
+    { "source": "/docs", "destination": "/api" },
+    { "source": "/openapi.json", "destination": "/api" }
+  ]
+}

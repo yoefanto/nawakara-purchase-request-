@@ -25,6 +25,26 @@ from .service import (
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM purchase_requests")
+        if cursor.fetchone()[0] == 0:
+            pr1 = create_purchase_request(conn, PurchaseRequestCreate(
+                requester_name="Rina Wijaya",
+                department="Information Technology",
+                items=[
+                    LineItemCreate(item_name="Laptop 14\" (i7, 16 GB)", quantity=2, unit_price=15500000.0),
+                    LineItemCreate(item_name="USB-C docking station", quantity=2, unit_price=1850000.0),
+                    LineItemCreate(item_name="Monitor 27\"", quantity=1, unit_price=3400000.0),
+                ]
+            ))
+            cursor.execute("UPDATE purchase_requests SET request_number = 'PR-2026-0042' WHERE id = ?", (pr1.id,))
+            conn.commit()
+    except Exception:
+        pass
+    finally:
+        conn.close()
     yield
 
 app = FastAPI(
