@@ -129,7 +129,36 @@ A full-stack, enterprise-grade Purchase Request System featuring multi-item requ
 
 ---
 
-## 5. Running the Application
+## 5. API Reference & Endpoints
+
+FastAPI generates automatic, interactive OpenAPI documentation. When the server is running, you can explore and test all endpoints interactively at:
+- **Interactive Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc Documentation**: `http://localhost:8000/redoc`
+
+### REST Endpoints Summary
+
+| Method | Endpoint | Description | Role / Precondition |
+|---|---|---|---|
+| `GET` | `/health` | Health check probe | Public |
+| `GET` | `/api/requests` | List all requests (optional `?status=DRAFT`) | Public / Authenticated |
+| `GET` | `/api/requests/{id}` | Get request detail with items & audit logs | Public / Authenticated |
+| `POST` | `/api/requests` | Create new purchase request & items | Requester (initial status: `DRAFT`) |
+| `PUT` | `/api/requests/{id}` | Modify request details or items | Requester (allowed only in `DRAFT` status) |
+| `POST` | `/api/requests/{id}/workflow` | Execute workflow action (`SUBMIT`, `APPROVE`, `REJECT`) | Enforces role rules (`approver` only for approval/rejection) |
+
+#### Example: Workflow Action Payload
+```json
+{
+  "actor": "Sarah Jenkins (Approver)",
+  "role": "approver",
+  "action": "APPROVE",
+  "note": "Approved for procurement processing"
+}
+```
+
+---
+
+## 6. Running the Application
 
 ### Prerequisites
 - Python 3.10+ (Tested on Python 3.12)
