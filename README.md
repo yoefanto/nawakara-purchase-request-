@@ -1,7 +1,7 @@
 # Enterprise Purchase Request System
 
 > **Reference**: Nawakara Talent & Engineering Assessment · Ref. TA-PRS  
-> **Status**: Verified & Tested (8 Automated Tests Passing)
+> **Status**: Verified & Tested (14 Automated Tests Passing 100%)
 
 A full-stack, enterprise-grade Purchase Request System featuring multi-item requisition, approval workflow state machine, server-side data integrity guarantees, role-based controls, and atomic transactional audit trails.
 
@@ -179,4 +179,22 @@ Swagger API documentation is available at `http://localhost:8000/docs`.
 ```bash
 pytest -v
 ```
-All 8 automated test suites verify calculations, workflow transitions, role gates, and atomic rollback guarantees.
+All 14 automated test suites verify calculations, workflow transitions, role gates, atomic rollback guarantees, and the 6 official Nawakara assessment scenarios in `tests/test_nawakara_edge_cases.py`.
+
+---
+
+## 7. Assumptions, Known Limitations, and Future Improvements
+
+### Technical & Business Assumptions
+1. **Irreversibility of Decisions**: `APPROVED` and `REJECTED` are final terminal states. In strict enterprise financial governance, rejected requisitions cannot be reopened; users must initiate a fresh request citing the original PR number.
+2. **Strict Segregation of Duties**: Even if a user has a `Manager` role, they are strictly prohibited from approving their own purchase requests.
+3. **Server-Side Calculation Authority**: Any client-sent grand total is discarded. Line totals and grand totals are authoritative derived properties computed in the domain layer.
+
+### Known Limitations
+1. **Single-File Storage**: SQLite provides excellent ACID atomicity and zero setup friction for evaluation, but is tailored for single-host deployments.
+2. **Binary Attachments**: The current implementation focuses exclusively on line item data, workflow state transitions, and audit records; physical document/invoice attachments are omitted in this phase.
+
+### Future Improvements Roadmap
+1. **Tiered Approval Limits**: Dynamic routing based on financial thresholds (e.g. Department Manager for <= IDR 10,000,000; VP/Director for > IDR 10,000,000).
+2. **Automated Migrations**: Integrating Alembic and SQLAlchemy to support automated migrations to PostgreSQL or MySQL for high-scale production.
+3. **Event-Driven Webhooks**: Publishing status transition events to notification channels (email, Slack, or Telegram bot).

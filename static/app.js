@@ -1,4 +1,11 @@
-let activeRole = 'requester';
+const NAWAKARA_USERS = {
+  rina: { name: 'Rina Wijaya', role: 'Employee', dept: 'Information Technology' },
+  andi: { name: 'Andi Saputra', role: 'Employee', dept: 'Operations' },
+  budi: { name: 'Budi Hartono', role: 'Manager', dept: 'Management' },
+  sari: { name: 'Sari Lestari', role: 'Manager', dept: 'Finance' },
+};
+
+let currentUserKey = 'rina';
 let allRequests = [];
 let currentFilter = null;
 let currentPR = null;
@@ -20,19 +27,8 @@ function formatDate(isoStr) {
   return d.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function setRole(role) {
-  activeRole = role;
-  const reqBtn = document.getElementById('role-requester-btn');
-  const appBtn = document.getElementById('role-approver-btn');
-  
-  if (role === 'requester') {
-    reqBtn.className = 'px-3 py-1 rounded-md bg-white text-indigo-600 shadow-sm transition';
-    appBtn.className = 'px-3 py-1 rounded-md text-slate-600 hover:text-slate-900 transition';
-  } else {
-    appBtn.className = 'px-3 py-1 rounded-md bg-white text-indigo-600 shadow-sm transition';
-    reqBtn.className = 'px-3 py-1 rounded-md text-slate-600 hover:text-slate-900 transition';
-  }
-
+function changeActiveUser(key) {
+  currentUserKey = key;
   if (currentPR) {
     renderModalActions(currentPR);
   }
@@ -120,9 +116,13 @@ function renderTable() {
 }
 
 function openCreateModal() {
+  const u = NAWAKARA_USERS[currentUserKey];
+  document.getElementById('form-requester').value = u.name;
+  document.getElementById('form-department').value = u.dept;
   document.getElementById('items-container').innerHTML = '';
-  addLineItemRow('MacBook Pro M3 Max 36GB', 1, 35000000);
-  addLineItemRow('Dell 27-inch 4K Monitor', 2, 7500000);
+  addLineItemRow('Laptop 14" (i7, 16 GB)', 2, 15500000);
+  addLineItemRow('USB-C docking station', 2, 1850000);
+  addLineItemRow('Monitor 27"', 1, 3400000);
   calcPreviewTotal();
   document.getElementById('create-modal').classList.remove('hidden');
 }
@@ -267,15 +267,16 @@ function renderModalDetail(pr) {
 function renderModalActions(pr) {
   const btnContainer = document.getElementById('modal-action-buttons');
   const hint = document.getElementById('modal-action-hint');
+  const u = NAWAKARA_USERS[currentUserKey];
   btnContainer.innerHTML = '';
 
   if (pr.status === 'APPROVED' || pr.status === 'REJECTED') {
-    hint.textContent = `This request is finalized (${pr.status}). No further actions permitted.`;
+    hint.textContent = `This request is finalized (${pr.status}). Final statuses cannot change.`;
     return;
   }
 
   if (pr.status === 'DRAFT') {
-    hint.textContent = 'Active Status: DRAFT (Pending Submission)';
+    hint.textContent = `Active User: ${u.name} (${u.role}) · Status: DRAFT`;
     btnContainer.innerHTML = `
       <button onclick="executeWorkflow(${pr.id}, 'SUBMIT')" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow transition inline-flex items-center space-x-1">
         <i class="fa-solid fa-paper-plane text-[10px]"></i>
@@ -286,42 +287,39 @@ function renderModalActions(pr) {
   }
 
   if (pr.status === 'SUBMITTED') {
-    if (activeRole === 'approver') {
-      hint.textContent = 'Awaiting Approver Decision:';
-      btnContainer.innerHTML = `
-        <button onclick="executeWorkflow(${pr.id}, 'REJECT')" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold shadow transition inline-flex items-center space-x-1">
-          <i class="fa-solid fa-xmark text-[10px]"></i>
-          <span>Reject</span>
-        </button>
-        <button onclick="executeWorkflow(${pr.id}, 'APPROVE')" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow transition inline-flex items-center space-x-1">
-          <i class="fa-solid fa-check text-[10px]"></i>
-          <span>Approve</span>
-        </button>
-        <button onclick="executeWorkflow(${pr.id}, 'APPROVE', true)" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-semibold shadow transition" title="Simulates a database failure during audit trail write to verify atomic transaction rollback">
-          <i class="fa-solid fa-flask text-[10px]"></i>
-          <span>Simulate Rollback Failure</span>
-        </button>
-      `;
-    } else {
-      hint.textContent = 'Submitted. Only users with Approver role can Approve or Reject.';
-    }
+    hint.textContent = `Active User: ${u.name} (${u.role}) · Decision Actions:`;
+    btnContainer.innerHTML = `
+      <button onclick="executeWorkflow(${pr.id}, 'REJECT')" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold shadow transition inline-flex items-center space-x-1">
+        <i class="fa-solid fa-xmark text-[10px]"></i>
+        <span>Reject</span>
+      </button>
+      <button onclick="executeWorkflow(${pr.id}, 'APPROVE')" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow transition inline-flex items-center space-x-1">
+        <i class="fa-solid fa-check text-[10px]"></i>
+        <span>Approve</span>
+      </button>
+      <button onclick="executeWorkflow(${pr.id}, 'APPROVE', true)" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-semibold shadow transition" title="Simulates a database failure during audit trail write to verify atomic transaction rollback">
+        <i class="fa-solid fa-flask text-[10px]"></i>
+        <span>Simulate Rollback Failure</span>
+      </button>
+    `;
   }
 }
 
 async function executeWorkflow(id, action, failAudit = false) {
-  const actorName = activeRole === 'approver' ? 'Sarah Jenkins (Approver)' : 'Budi Santoso (Requester)';
+  const u = NAWAKARA_USERS[currentUserKey];
   let note = null;
 
   if (action === 'REJECT') {
-    note = prompt('Enter rejection reason (Required):');
-    if (!note) {
-      alert('Rejection reason is required.');
+    note = prompt('Enter rejection reason (Required):', 'Budget limit exceeded for Q4');
+    if (note === null) return;
+    if (!note.trim()) {
+      alert('Unprocessable: A rejection reason is required.');
       return;
     }
   } else if (action === 'APPROVE') {
-    note = 'Approved for procurement department processing';
+    note = 'Within Q4 IT budget';
   } else if (action === 'SUBMIT') {
-    note = 'Submitted for management review';
+    note = 'Submitted for manager review';
   }
 
   try {
@@ -330,25 +328,25 @@ async function executeWorkflow(id, action, failAudit = false) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        actor: actorName,
-        role: activeRole,
+        actor: u.name,
+        role: u.role.toLowerCase(),
         action: action,
+        version: currentPR ? currentPR.version : 1,
         note: note
       })
     });
 
+    const data = await res.json();
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Workflow transition failed');
+      throw new Error(data.detail || 'Workflow transition failed');
     }
 
     await loadRequests();
     await openDetail(id);
   } catch (err) {
-    alert('Workflow Action Result:\n' + err.message);
-    // Reload to verify if state was rolled back
+    alert('Server Response:\n' + err.message);
     await loadRequests();
-    await openDetail(id);
+    if (currentPR) await openDetail(id);
   }
 }
 
