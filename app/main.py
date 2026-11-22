@@ -12,6 +12,7 @@ from .models import (
     PurchaseRequestUpdate,
     WorkflowAction,
     PurchaseRequestResponse,
+    SimulatorDecision,
 )
 from .service import (
     create_purchase_request,
@@ -72,6 +73,58 @@ def workflow_action(
         return transition_workflow(conn, pr_id, action, test_fail_audit=test_fail_audit)
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Direct Simulator Route Equivalents (Matching Nawakara Assessment Spec)
+@app.get("/requests", response_model=List[PurchaseRequestResponse])
+def simulator_get_requests(status: Optional[str] = Query(None), conn: sqlite3.Connection = Depends(get_db)):
+    return list_purchase_requests(conn, status=status)
+
+@app.get("/requests/{pr_id}", response_model=PurchaseRequestResponse)
+def simulator_get_request(pr_id: int, conn: sqlite3.Connection = Depends(get_db)):
+    return get_purchase_request(conn, pr_id)
+
+@app.put("/requests/{pr_id}", response_model=PurchaseRequestResponse)
+def simulator_save_draft(pr_id: int, data: PurchaseRequestUpdate, actor: str = Query("requester"), conn: sqlite3.Connection = Depends(get_db)):
+    return update_draft_request(conn, pr_id, data, actor=actor)
+
+@app.post("/requests/{pr_id}/submit", response_model=PurchaseRequestResponse)
+def simulator_submit(
+    pr_id: int,
+    actor: str = Query("requester"),
+    conn: sqlite3.Connection = Depends(get_db)
+):
+    action = WorkflowAction(actor=actor, role="requester", action="SUBMIT", note="Submitted request")
+    return transition_workflow(conn, pr_id, action)
+
+@app.post("/requests/{pr_id}/approve", response_model=PurchaseRequestResponse)
+def simulator_approve(
+    pr_id: int,
+    body: SimulatorDecision,
+    conn: sqlite3.Connection = Depends(get_db)
+):
+    action = WorkflowAction(
+        actor=body.actor,
+        role="manager",
+        action="APPROVE",
+        version=body.version,
+        note=body.comment or "Approved"
+    )
+    return transition_workflow(conn, pr_id, action)
+
+@app.post("/requests/{pr_id}/reject", response_model=PurchaseRequestResponse)
+def simulator_reject(
+    pr_id: int,
+    body: SimulatorDecision,
+    conn: sqlite3.Connection = Depends(get_db)
+):
+    action = WorkflowAction(
+        actor=body.actor,
+        role="manager",
+        action="REJECT",
+        version=body.version,
+        note=body.comment
+    )
+    return transition_workflow(conn, pr_id, action)
 
 # Mount Static UI
 static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")

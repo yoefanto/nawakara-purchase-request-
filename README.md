@@ -137,24 +137,24 @@ FastAPI generates automatic, interactive OpenAPI documentation. When the server 
 
 ### REST Endpoints Summary
 
-| Method | Endpoint | Description | Role / Precondition |
-|---|---|---|---|
-| `GET` | `/health` | Health check probe | Public |
-| `GET` | `/api/requests` | List all requests (optional `?status=DRAFT`) | Public / Authenticated |
-| `GET` | `/api/requests/{id}` | Get request detail with items & audit logs | Public / Authenticated |
-| `POST` | `/api/requests` | Create new purchase request & items | Requester (initial status: `DRAFT`) |
-| `PUT` | `/api/requests/{id}` | Modify request details or items | Requester (allowed only in `DRAFT` status) |
-| `POST` | `/api/requests/{id}/workflow` | Execute workflow action (`SUBMIT`, `APPROVE`, `REJECT`) | Enforces role rules (`approver` only for approval/rejection) |
+Sistem menyediakan dual-route mapping: rute standar REST API (`/api/requests/...`) dan rute simulator resmi asesmen Nawakara (`/requests/...`):
 
-#### Example: Workflow Action Payload
-```json
-{
-  "actor": "Sarah Jenkins (Approver)",
-  "role": "approver",
-  "action": "APPROVE",
-  "note": "Approved for procurement processing"
-}
-```
+| Method | Endpoint | Description | Status Code | Role / Rule |
+|---|---|---|---|---|
+| `GET` | `/requests` atau `/api/requests` | List all purchase requests | `200` | Public / Filterable by `?status=` |
+| `GET` | `/requests/{id}` atau `/api/requests/{id}` | Get detail request with items & audit history | `200` / `404` | Public |
+| `POST` | `/api/requests` | Create new purchase request (DRAFT) | `201` / `422` | Requester |
+| `PUT` | `/requests/{id}` atau `/api/requests/{id}` | Update draft details & line items | `200` / `409` | Allowed only in `DRAFT` status |
+| `POST` | `/requests/{id}/submit` | Submit draft for approval review | `200` / `409` / `422` | Requester (requires >= 1 valid item) |
+| `POST` | `/requests/{id}/approve` | Approve submitted purchase request | `200` / `403` / `409` | Manager only (requester cannot self-approve) |
+| `POST` | `/requests/{id}/reject` | Reject purchase request (final, irreversible) | `200` / `403` / `409` / `422` | Manager only (requires comment/reason) |
+
+#### Standard HTTP Response Codes Handled
+- `200 OK`: Aksi berhasil dieksekusi dengan subtotal dan grand total dihitung ulang oleh server.
+- `403 Forbidden`: Pemohon mencoba menyetujui request milik sendiri, atau user non-manajer mencoba approve/reject.
+- `409 Conflict`: Request sudah bukan Draft saat di-submit, atau request sudah Approved/Rejected (status final), atau terjadi version mismatch concurrency.
+- `422 Unprocessable Entity`: Daftar item kosong, nilai kuantitas <= 0, harga < 0, atau alasan penolakan kosong saat reject.
+- `500 Internal Server Error`: Kegagalan penulisan audit log yang memicu rollback transaksi database secara atomik.
 
 ---
 

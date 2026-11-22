@@ -40,9 +40,16 @@ class PurchaseRequestUpdate(BaseModel):
 
 class WorkflowAction(BaseModel):
     actor: str = Field(..., min_length=1, max_length=100)
-    role: str = Field(..., description="Role of the actor: requester or approver")
+    role: str = Field(..., description="Role of the actor: requester or approver/manager")
     action: str = Field(..., description="SUBMIT, APPROVE, or REJECT")
+    version: Optional[int] = None
     note: Optional[str] = None
+
+class SimulatorDecision(BaseModel):
+    actor: str = Field("Manager", description="Name of manager/actor")
+    version: Optional[int] = None
+    comment: Optional[str] = None
+
 
 class AuditLogResponse(BaseModel):
     id: int

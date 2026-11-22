@@ -214,25 +214,46 @@ def transition_workflow(
 
     if current.status in ("APPROVED", "REJECTED"):
         raise HTTPException(
-            status_code=400,
-            detail=f"Cannot perform '{action}' on request with status '{current.status}'. Final states are irreversible."
+            status_code=409,
+            detail=f"Conflict: request is already {current.status}. Final statuses cannot change."
         )
 
     next_status = allowed_transitions.get(current.status, {}).get(action)
     if not next_status:
         raise HTTPException(
-            status_code=400,
-            detail=f"Invalid transition: Cannot '{action}' a request in status '{current.status}'."
+            status_code=409,
+            detail=f"Conflict: request is in {current.status}. Cannot perform '{action}'."
         )
 
-    # Role validation
+    # Concurrency version check
+    if action_data.version is not None and action_data.version != current.version:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Conflict: request changed (expected v{action_data.version}, current v{current.version}, status {current.status}). Reload and try again."
+        )
+
+    # Business rule validations
     if action == "SUBMIT":
-        pass  # Requester or Approver can submit
+        if not current.items:
+            raise HTTPException(
+                status_code=422,
+                detail="Unprocessable: a request needs at least one item before it can be submitted."
+            )
     elif action in ("APPROVE", "REJECT"):
-        if role != "approver":
+        if role not in ("approver", "manager"):
             raise HTTPException(
                 status_code=403,
-                detail=f"Forbidden: Action '{action}' requires 'approver' role, current role is '{role}'."
+                detail=f"Forbidden: only managers can {action.lower()} requests."
+            )
+        if action_data.actor.lower() == current.requester_name.lower():
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: you cannot decide on your own request."
+            )
+        if action == "REJECT" and (not action_data.note or not action_data.note.strip()):
+            raise HTTPException(
+                status_code=422,
+                detail="Unprocessable: a rejection reason is required."
             )
 
     now = utc_now_iso()

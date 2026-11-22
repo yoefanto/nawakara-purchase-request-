@@ -60,13 +60,13 @@ def test_workflow_rejection_is_irreversible():
     )
     assert pr_rej.status == "REJECTED"
 
-    # Attempt to approve rejected request -> MUST fail
+    # Attempt to approve rejected request -> MUST fail with 409 Conflict
     with pytest.raises(HTTPException) as exc_info:
         transition_workflow(
             conn, pr.id, WorkflowAction(actor="Director", role="approver", action="APPROVE", note="Overriding reject")
         )
-    assert exc_info.value.status_code == 400
-    assert "irreversible" in exc_info.value.detail
+    assert exc_info.value.status_code == 409
+    assert "REJECTED" in exc_info.value.detail
     conn.close()
 
 def test_requester_cannot_approve():
